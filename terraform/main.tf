@@ -157,3 +157,67 @@ resource "aws_iam_instance_profile" "ec2_profile" {
   name = "SOC-EC2-Profile"
   role = aws_iam_role.ec2_cloudwatch_role.name
 }
+resource "aws_sns_topic" "soc_alerts" {
+  name = "SOC-Alerts"
+
+  tags = {
+    Name    = "SOC-Alerts"
+    Project = "AWS-Cloud-Security-SOC"
+  }
+}
+resource "aws_sns_topic_subscription" "email_alert" {
+  topic_arn = aws_sns_topic.soc_alerts.arn
+  protocol  = "email"
+  endpoint  = "sachinkumarsk3303@gmail.com"
+}
+resource "aws_cloudwatch_metric_alarm" "high_cpu_alarm" {
+  alarm_name          = "SOC-Server-High-CPU-Alarm"
+  comparison_operator = "LessThanThreshold"
+  evaluation_periods  = 1
+  metric_name         = "cpu_usage_idle"
+  namespace           = "CWAgent"
+  period              = 60
+  statistic           = "Average"
+  threshold           = 30
+  alarm_description   = "Triggers when SOC-Server CPU usage is high"
+  treat_missing_data  = "notBreaching"
+
+  dimensions = {
+    InstanceId = aws_instance.soc_server.id
+    cpu        = "cpu-total"
+  }
+
+  alarm_actions = [
+    aws_sns_topic.soc_alerts.arn
+  ]
+
+  tags = {
+    Name    = "SOC-Server-High-CPU-Alarm"
+    Project = "AWS-Cloud-Security-SOC"
+  }
+}
+resource "aws_cloudwatch_metric_alarm" "high_memory_alarm" {
+  alarm_name          = "SOC-Server-High-Memory-Alarm"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = 1
+  metric_name         = "mem_used_percent"
+  namespace           = "CWAgent"
+  period              = 60
+  statistic           = "Average"
+  threshold           = 80
+  alarm_description   = "Triggers when SOC-Server memory usage is above 80 percent"
+  treat_missing_data  = "notBreaching"
+
+  dimensions = {
+    InstanceId = aws_instance.soc_server.id
+  }
+
+  alarm_actions = [
+    aws_sns_topic.soc_alerts.arn
+  ]
+
+  tags = {
+    Name    = "SOC-Server-High-Memory-Alarm"
+    Project = "AWS-Cloud-Security-SOC"
+  }
+}
